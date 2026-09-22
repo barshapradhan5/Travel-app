@@ -1,237 +1,123 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { useQuery } from '@tanstack/react-query'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { UserCheck, Star, Languages, MapPin, Calendar, Clock, X } from 'lucide-react'
+import { useQuery } from '@tanstack/react-query'
+import { Users, MapPin, Star, Globe, CalendarDays } from 'lucide-react'
 import toast from 'react-hot-toast'
 import api from '../services/api'
 import { useAuth } from '../context/AuthContext'
 
+const fadeUp = { hidden: { opacity: 0, y: 20 }, visible: { opacity: 1, y: 0 } }
+
 export default function Guides() {
-  const { isAuthenticated } = useAuth()
+  const [searchParams] = useSearchParams()
+  const destId = searchParams.get('destination_id')
   const navigate = useNavigate()
+  const { isAuthenticated } = useAuth()
+  const [bookingId, setBookingId] = useState(null)
 
-  const [selectedGuide, setSelectedGuide] = useState(null)
-  const [guideDate, setGuideDate] = useState('')
-  const [timeSlot, setTimeSlot] = useState('full-day')
-  const [modalOpen, setModalOpen] = useState(false)
-  const [bookingLoading, setBookingLoading] = useState(false)
-
-  const { data: guidesData, isLoading } = useQuery({
-    queryKey: ['guides-list'],
-    queryFn: async () => {
-      const res = await api.get('/guides?per_page=20')
-      return res.data
+  const { data, isLoading } = useQuery({
+    queryKey: ['guides', destId],
+    queryFn: () => {
+      let url = '/guides?per_page=50'
+      if (destId) url += `&destination_id=${destId}`
+      return api.get(url).then(r => r.data)
     },
   })
 
-  const openBookingModal = (guide) => {
-    if (!isAuthenticated) {
-      toast('Please log in to hire a travel guide.', { icon: '🔒' })
-      navigate('/login')
-      return
-    }
-    setSelectedGuide(guide)
-    setGuideDate(new Date().toISOString().split('T')[0])
-    setTimeSlot('full-day')
-    setModalOpen(true)
-  }
-
-  const handleBookingSubmit = async (e) => {
-    e.preventDefault()
-    if (!guideDate) {
-      toast.error('Please select a date for your guide.')
-      return
-    }
-
-    setBookingLoading(true)
-
+  const handleBook = async (guide) => {
+    if (!isAuthenticated) { navigate('/login'); return }
+    const tomorrow = new Date(Date.now() + 86400000).toISOString().split('T')[0]
+    setBookingId(guide.id)
     try {
-      const payload = {
-        guide_id: selectedGuide.id,
-        date: guideDate,
-        time_slot: timeSlot,
-      }
-      const res = await api.post('/bookings/guide', payload)
-      toast.success('Travel guide requested successfully!')
-      setModalOpen(false)
+      const res = await api.post('/bookings/guide', {
+        guide_id: guide.id,
+        date: tomorrow,
+        time_slot: 'full-day',
+      })
+      toast.success('Guide booked!')
       navigate('/booking-confirmation', { state: { booking: res.data.booking } })
     } catch (err) {
-      const msg = err.response?.data?.error?.message || 'Failed to hire guide.'
-      toast.error(typeof msg === 'string' ? msg : 'Booking error')
+      toast.error(err.response?.data?.error?.message || 'Booking failed')
     } finally {
-      setBookingLoading(false)
+      setBookingId(null)
     }
   }
 
   return (
-    <div className="section" style={{ minHeight: '85vh' }}>
-      <div style={{ textAlign: 'center', marginBottom: '3rem' }}>
-        <h1 className="section-title">Hire Local Expert Guides</h1>
-        <p className="section-subtitle" style={{ margin: '0 auto' }}>
-          Connect with licensed, multilingual local guides for customized itineraries and insider culture.
-        </p>
+    <motion.div initial="hidden" animate="visible" transition={{ staggerChildren: 0.05 }} className="min-h-screen">
+      <div className="py-10 px-4" style={{ background: 'linear-gradient(180deg, var(--color-surface-light), var(--color-surface))' }}>
+        <div className="max-w-7xl mx-auto">
+          <motion.h1 variants={fadeUp} className="text-3xl sm:text-4xl font-bold font-heading text-white mb-2">
+            Travel <span className="gradient-text">Guides</span>
+          </motion.h1>
+          <motion.p variants={fadeUp} style={{ color: 'var(--color-text-muted)' }}>
+            Expert local guides to make your trip unforgettable
+          </motion.p>
+        </div>
       </div>
 
-      {isLoading ? (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '1.5rem' }}>
-          {[1, 2, 3, 4, 5, 6].map((n) => (
-            <div key={n} className="skeleton" style={{ height: '280px' }} />
-          ))}
-        </div>
-      ) : (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '1.75rem' }}>
-          {guidesData?.guides?.map((guide) => (
-            <motion.div key={guide.id} whileHover={{ y: -6 }} className="card" style={{ padding: '1.5rem' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1rem' }}>
-                <img
-                  src={guide.avatar_url || `https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200`}
-                  alt={guide.name}
-                  style={{ width: '60px', height: '60px', borderRadius: '50%', objectFit: 'cover', border: '2px solid #6366f1' }}
-                />
-                <div>
-                  <h3 style={{ fontSize: '1.15rem', color: '#f8fafc', marginBottom: '0.2rem' }}>
-                    {guide.name}
-                  </h3>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', color: '#f59e0b', fontSize: '0.85rem', fontWeight: 700 }}>
-                    <Star size={14} fill="#f59e0b" color="#f59e0b" />
-                    <span>{guide.rating} ★</span>
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+        {isLoading ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            {[...Array(6)].map((_, i) => <div key={i} className="skeleton h-72 rounded-xl" />)}
+          </div>
+        ) : data?.guides?.length > 0 ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            {data.guides.map((guide, i) => (
+              <motion.div key={guide.id} variants={fadeUp} transition={{ delay: i * 0.04 }}>
+                <div className="card p-6">
+                  <div className="flex items-start gap-4 mb-4">
+                    <div className="w-16 h-16 rounded-2xl overflow-hidden flex-shrink-0">
+                      <img src={guide.image_url} alt={guide.name} className="w-full h-full object-cover" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <h3 className="font-semibold text-white text-lg truncate">{guide.name}</h3>
+                      <p className="text-xs flex items-center gap-1" style={{ color: 'var(--color-text-muted)' }}>
+                        <MapPin size={12} /> {guide.destination_name}
+                      </p>
+                      <div className="flex items-center gap-2 mt-1">
+                        <span className="badge badge-primary flex items-center gap-1 text-xs">
+                          <Star size={10} fill="currentColor" /> {guide.rating}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <p className="text-sm mb-4 line-clamp-2" style={{ color: 'var(--color-text-muted)' }}>{guide.bio}</p>
+
+                  {guide.languages?.length > 0 && (
+                    <div className="flex items-center gap-1 mb-4 flex-wrap">
+                      <Globe size={14} className="text-indigo-400" />
+                      {guide.languages.map(lang => (
+                        <span key={lang} className="text-xs px-2 py-0.5 rounded-full" style={{ background: 'var(--color-surface)', color: 'var(--color-text-muted)' }}>
+                          {lang}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+
+                  <div className="flex items-center justify-between pt-4 border-t" style={{ borderColor: 'var(--color-border)' }}>
+                    <div>
+                      <span className="text-xl font-bold text-white">${guide.price_per_day}</span>
+                      <span className="text-xs ml-1" style={{ color: 'var(--color-text-dim)' }}>/day</span>
+                    </div>
+                    <button onClick={() => handleBook(guide)} disabled={bookingId === guide.id}
+                      className="btn-primary text-sm" style={{ padding: '0.5rem 1.25rem', opacity: bookingId === guide.id ? 0.7 : 1 }}>
+                      <CalendarDays size={14} /> {bookingId === guide.id ? 'Booking...' : 'Book Guide'}
+                    </button>
                   </div>
                 </div>
-              </div>
-
-              <div style={{ fontSize: '0.85rem', color: '#818cf8', display: 'flex', alignItems: 'center', gap: '0.3rem', marginBottom: '0.5rem' }}>
-                <MapPin size={14} />
-                <span>{guide.destination_name}</span>
-              </div>
-
-              <div style={{ fontSize: '0.82rem', color: '#cbd5e1', display: 'flex', alignItems: 'center', gap: '0.4rem', marginBottom: '0.75rem' }}>
-                <Languages size={14} color="#a855f7" />
-                <span>{guide.languages?.join(', ')}</span>
-              </div>
-
-              <p style={{ fontSize: '0.85rem', color: '#94a3b8', lineHeight: 1.5, marginBottom: '1.25rem' }}>
-                {guide.bio}
-              </p>
-
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 'auto' }}>
-                <div>
-                  <span style={{ fontSize: '1.25rem', fontWeight: 800, color: '#f8fafc' }}>${guide.price_per_day}</span>
-                  <span style={{ fontSize: '0.8rem', color: '#94a3b8' }}> / day</span>
-                </div>
-                <button
-                  onClick={() => openBookingModal(guide)}
-                  className="btn-primary"
-                  style={{ padding: '0.5rem 1.1rem', fontSize: '0.85rem' }}
-                >
-                  Hire Guide
-                </button>
-              </div>
-            </motion.div>
-          ))}
-        </div>
-      )}
-
-      {/* Booking Modal */}
-      {modalOpen && selectedGuide && (
-        <div style={{
-          position: 'fixed',
-          inset: 0,
-          zIndex: 2000,
-          background: 'rgba(0, 0, 0, 0.75)',
-          backdropFilter: 'blur(8px)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          padding: '1.5rem',
-        }}>
-          <motion.div
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            className="glass"
-            style={{
-              width: '100%',
-              maxWidth: '440px',
-              padding: '2rem',
-              borderRadius: 'var(--radius-xl)',
-              position: 'relative',
-            }}
-          >
-            <button
-              onClick={() => setModalOpen(false)}
-              style={{
-                position: 'absolute',
-                top: '1rem',
-                right: '1rem',
-                background: 'none',
-                border: 'none',
-                color: '#94a3b8',
-                cursor: 'pointer',
-              }}
-            >
-              <X size={20} />
-            </button>
-
-            <h3 style={{ fontSize: '1.3rem', color: '#f8fafc', marginBottom: '0.25rem' }}>
-              Hire {selectedGuide.name}
-            </h3>
-            <p style={{ fontSize: '0.88rem', color: '#818cf8', marginBottom: '1.5rem' }}>
-              {selectedGuide.destination_name} — ${selectedGuide.price_per_day} / day
-            </p>
-
-            <form onSubmit={handleBookingSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-              <div>
-                <label className="input-label">Date of Service</label>
-                <input
-                  type="date"
-                  required
-                  min={new Date().toISOString().split('T')[0]}
-                  className="input-field"
-                  value={guideDate}
-                  onChange={(e) => setGuideDate(e.target.value)}
-                />
-              </div>
-
-              <div>
-                <label className="input-label">Time Slot</label>
-                <select
-                  className="input-field"
-                  value={timeSlot}
-                  onChange={(e) => setTimeSlot(e.target.value)}
-                >
-                  <option value="full-day">Full Day (8 Hours)</option>
-                  <option value="morning">Morning Slot (9 AM - 1 PM)</option>
-                  <option value="afternoon">Afternoon Slot (2 PM - 6 PM)</option>
-                </select>
-              </div>
-
-              <div style={{
-                padding: '1rem',
-                borderRadius: 'var(--radius-md)',
-                background: 'rgba(99, 102, 241, 0.15)',
-                border: '1px solid rgba(99, 102, 241, 0.3)',
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-              }}>
-                <span style={{ fontSize: '0.9rem', color: '#cbd5e1' }}>Daily Fee:</span>
-                <span style={{ fontSize: '1.3rem', fontWeight: 800, color: '#f8fafc' }}>
-                  ${selectedGuide.price_per_day}
-                </span>
-              </div>
-
-              <button
-                type="submit"
-                disabled={bookingLoading}
-                className="btn-primary"
-                style={{ width: '100%', padding: '0.85rem' }}
-              >
-                {bookingLoading ? 'Processing...' : 'Confirm Guide Request'}
-              </button>
-            </form>
-          </motion.div>
-        </div>
-      )}
-    </div>
+              </motion.div>
+            ))}
+          </div>
+        ) : (
+          <div className="text-center py-20">
+            <Users size={48} className="mx-auto mb-4 text-indigo-400 opacity-50" />
+            <p style={{ color: 'var(--color-text-muted)' }}>No guides available at the moment.</p>
+          </div>
+        )}
+      </div>
+    </motion.div>
   )
 }

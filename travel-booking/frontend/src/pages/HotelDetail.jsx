@@ -1,340 +1,192 @@
 import { useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { useQuery } from '@tanstack/react-query'
 import { motion } from 'framer-motion'
-import { Star, MapPin, Wifi, Coffee, Tv, Shield, Calendar, Users, CheckCircle, AlertCircle, X } from 'lucide-react'
+import { useQuery } from '@tanstack/react-query'
+import { MapPin, Star, Wifi, Waves, Dumbbell, Utensils, Sparkles, Users, CalendarDays, Check } from 'lucide-react'
 import toast from 'react-hot-toast'
 import api from '../services/api'
 import { useAuth } from '../context/AuthContext'
+
+const amenityIcons = {
+  wifi: Wifi, pool: Waves, gym: Dumbbell, restaurant: Utensils, spa: Sparkles,
+}
 
 export default function HotelDetail() {
   const { id } = useParams()
   const navigate = useNavigate()
   const { isAuthenticated } = useAuth()
-
   const [selectedRoom, setSelectedRoom] = useState(null)
   const [checkIn, setCheckIn] = useState('')
   const [checkOut, setCheckOut] = useState('')
-  const [guests, setGuests] = useState(2)
-  const [bookingLoading, setBookingLoading] = useState(false)
-  const [modalOpen, setModalOpen] = useState(false)
+  const [guests, setGuests] = useState(1)
+  const [booking, setBooking] = useState(false)
 
-  const { data: hotelData, isLoading, isError } = useQuery({
+  const { data, isLoading } = useQuery({
     queryKey: ['hotel', id],
-    queryFn: async () => {
-      const res = await api.get(`/hotels/${id}`)
-      return res.data.hotel
-    },
+    queryFn: () => api.get(`/hotels/${id}`).then(r => r.data),
   })
 
-  const openBookingModal = (room) => {
-    if (!isAuthenticated) {
-      toast('Please log in to complete your booking.', { icon: '🔒' })
-      navigate('/login')
-      return
-    }
-    setSelectedRoom(room)
-    setModalOpen(true)
-  }
+  const hotel = data?.hotel
 
-  const handleBookingSubmit = async (e) => {
-    e.preventDefault()
-    if (!checkIn || !checkOut) {
-      toast.error('Please select both Check-In and Check-Out dates.')
-      return
-    }
+  const nights = checkIn && checkOut ? Math.max(1, Math.round((new Date(checkOut) - new Date(checkIn)) / 86400000)) : 0
+  const totalPrice = selectedRoom ? selectedRoom.price * nights : 0
 
-    if (new Date(checkIn) >= new Date(checkOut)) {
-      toast.error('Check-out date must be after Check-in date.')
-      return
-    }
+  const handleBook = async () => {
+    if (!isAuthenticated) { navigate('/login', { state: { from: { pathname: `/hotels/${id}` } } }); return }
+    if (!selectedRoom || !checkIn || !checkOut) { toast.error('Please select room, check-in and check-out dates'); return }
 
-    setBookingLoading(true)
-
+    setBooking(true)
     try {
-      const payload = {
-        hotel_id: Number(id),
+      const res = await api.post('/bookings/hotel', {
+        hotel_id: parseInt(id),
         room_id: selectedRoom.id,
         check_in: checkIn,
         check_out: checkOut,
-        guests: Number(guests),
-      }
-      const res = await api.post('/bookings/hotel', payload)
-      toast.success('Hotel room booked successfully!')
-      setModalOpen(false)
+        guests,
+      })
+      toast.success('Hotel booked successfully!')
       navigate('/booking-confirmation', { state: { booking: res.data.booking } })
     } catch (err) {
-      const msg = err.response?.data?.error?.message || 'Failed to complete booking.'
-      toast.error(typeof msg === 'string' ? msg : 'Validation error')
+      toast.error(err.response?.data?.error?.message || 'Booking failed')
     } finally {
-      setBookingLoading(false)
+      setBooking(false)
     }
   }
 
-  // Calculate total nights and price
-  const calculateTotal = () => {
-    if (!checkIn || !checkOut || !selectedRoom) return 0
-    const start = new Date(checkIn)
-    const end = new Date(checkOut)
-    const nights = Math.max(1, Math.ceil((end - start) / (1000 * 60 * 60 * 24)))
-    return nights * selectedRoom.price
-  }
+  if (isLoading) return (
+    <div className="max-w-7xl mx-auto px-4 py-16">
+      <div className="skeleton h-80 rounded-2xl mb-6" />
+      <div className="skeleton h-8 w-64 rounded-lg mb-4" />
+      <div className="skeleton h-4 w-full rounded mb-2" />
+      <div className="skeleton h-4 w-3/4 rounded" />
+    </div>
+  )
 
-  if (isLoading) {
-    return (
-      <div className="section">
-        <div className="skeleton" style={{ height: '350px', marginBottom: '2rem' }} />
-        <div className="skeleton" style={{ height: '150px', marginBottom: '1.5rem' }} />
-        <div className="skeleton" style={{ height: '200px' }} />
-      </div>
-    )
-  }
+  if (!hotel) return <div className="text-center py-20" style={{ color: 'var(--color-text-muted)' }}>Hotel not found</div>
 
-  if (isError || !hotelData) {
-    return (
-      <div className="section" style={{ textAlign: 'center', padding: '5rem 1.5rem' }}>
-        <AlertCircle size={48} color="#ef4444" style={{ marginBottom: '1rem' }} />
-        <h2>Hotel Not Found</h2>
-        <p style={{ color: '#94a3b8', marginTop: '0.5rem' }}>The requested hotel details could not be loaded.</p>
-      </div>
-    )
-  }
+  const today = new Date().toISOString().split('T')[0]
 
   return (
-    <div className="section">
-      {/* Hotel Hero Gallery */}
-      <div style={{
-        position: 'relative',
-        height: '380px',
-        borderRadius: 'var(--radius-xl)',
-        overflow: 'hidden',
-        marginBottom: '2rem',
-      }}>
-        <img
-          src="https://images.unsplash.com/photo-1566073771259-6a8506099945?w=1200"
-          alt={hotelData.name}
-          style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-        />
-        <div style={{
-          position: 'absolute',
-          inset: 0,
-          background: 'linear-gradient(to top, rgba(15, 23, 42, 0.9) 0%, transparent 60%)',
-          display: 'flex',
-          flexDirection: 'column',
-          justifyContent: 'flex-end',
-          padding: '2rem',
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
-            <span className="badge badge-primary">{hotelData.destination_name}</span>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.2rem', color: '#f59e0b', fontSize: '0.9rem', fontWeight: 700 }}>
-              <Star size={16} fill="#f59e0b" color="#f59e0b" />
-              <span>{hotelData.rating}</span>
+    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      {/* Hero Image */}
+      <div className="relative h-64 sm:h-96 rounded-3xl overflow-hidden mb-8">
+        <img src={hotel.image_url} alt={hotel.name} className="w-full h-full object-cover" />
+        <div className="absolute inset-0" style={{ background: 'linear-gradient(to top, rgba(0,0,0,0.6), transparent 50%)' }} />
+        <div className="absolute bottom-6 left-6 right-6">
+          <div className="flex items-center gap-2 mb-2">
+            <span className="badge badge-primary flex items-center gap-1"><Star size={12} fill="currentColor" /> {hotel.rating}</span>
+            <span className="text-sm" style={{ color: 'var(--color-text-muted)' }}>
+              <MapPin size={14} className="inline" /> {hotel.destination_name}
+            </span>
+          </div>
+          <h1 className="text-3xl sm:text-4xl font-bold text-white font-heading">{hotel.name}</h1>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        {/* Left: Details */}
+        <div className="lg:col-span-2 space-y-8">
+          <div>
+            <h2 className="text-xl font-bold text-white mb-3 font-heading">About this hotel</h2>
+            <p style={{ color: 'var(--color-text-muted)' }}>{hotel.description}</p>
+          </div>
+
+          {/* Amenities */}
+          {hotel.amenities?.length > 0 && (
+            <div>
+              <h2 className="text-xl font-bold text-white mb-4 font-heading">Amenities</h2>
+              <div className="flex flex-wrap gap-3">
+                {hotel.amenities.map((a) => {
+                  const Icon = amenityIcons[a] || Sparkles
+                  return (
+                    <div key={a} className="flex items-center gap-2 px-4 py-2 rounded-xl"
+                      style={{ background: 'var(--color-surface-light)', border: '1px solid var(--color-border)' }}>
+                      <Icon size={16} className="text-indigo-400" />
+                      <span className="text-sm capitalize text-white">{a}</span>
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* Rooms */}
+          <div>
+            <h2 className="text-xl font-bold text-white mb-4 font-heading">Available Rooms</h2>
+            <div className="space-y-3">
+              {hotel.rooms?.map((room) => (
+                <div key={room.id}
+                  onClick={() => setSelectedRoom(room)}
+                  className="flex items-center justify-between p-4 rounded-xl cursor-pointer transition-all"
+                  style={{
+                    background: selectedRoom?.id === room.id ? 'rgba(99,102,241,0.1)' : 'var(--color-surface-light)',
+                    border: `2px solid ${selectedRoom?.id === room.id ? 'var(--color-primary)' : 'var(--color-border)'}`,
+                  }}>
+                  <div className="flex items-center gap-4">
+                    {selectedRoom?.id === room.id && <Check size={20} className="text-indigo-400" />}
+                    <div>
+                      <h4 className="font-semibold text-white">{room.room_type}</h4>
+                      <p className="text-xs" style={{ color: 'var(--color-text-muted)' }}>
+                        Up to {room.capacity} guests • {room.available_count} available
+                      </p>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <span className="text-lg font-bold text-white">${room.price}</span>
+                    <span className="text-xs block" style={{ color: 'var(--color-text-dim)' }}>/night</span>
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
-          <h1 style={{ fontSize: '2.4rem', color: '#ffffff', marginBottom: '0.4rem' }}>{hotelData.name}</h1>
-          <p style={{ color: '#cbd5e1', fontSize: '0.95rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-            <MapPin size={16} color="#818cf8" />
-            <span>Located in {hotelData.destination_name}</span>
-          </p>
-        </div>
-      </div>
-
-      {/* Hotel Description & Amenities */}
-      <div style={{
-        display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
-        gap: '2rem',
-        marginBottom: '3rem',
-      }}>
-        <div className="glass" style={{ padding: '2rem', borderRadius: 'var(--radius-lg)' }}>
-          <h3 style={{ fontSize: '1.3rem', color: '#f8fafc', marginBottom: '1rem' }}>About the Hotel</h3>
-          <p style={{ color: '#94a3b8', lineHeight: 1.7, fontSize: '0.95rem' }}>
-            {hotelData.description}
-          </p>
         </div>
 
-        <div className="glass" style={{ padding: '2rem', borderRadius: 'var(--radius-lg)' }}>
-          <h3 style={{ fontSize: '1.3rem', color: '#f8fafc', marginBottom: '1rem' }}>Featured Amenities</h3>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.75rem' }}>
-            {hotelData.amenities?.map((item, idx) => (
-              <div key={idx} style={{
-                padding: '0.5rem 1rem',
-                borderRadius: 'var(--radius-full)',
-                background: 'rgba(99, 102, 241, 0.1)',
-                border: '1px solid rgba(99, 102, 241, 0.2)',
-                color: '#818cf8',
-                fontSize: '0.85rem',
-                fontWeight: 500,
-                textTransform: 'capitalize',
-              }}>
-                ✓ {item}
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-
-      {/* Available Rooms Section */}
-      <div>
-        <h2 className="section-title" style={{ marginBottom: '1.5rem' }}>Available Rooms & Rates</h2>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '1.5rem' }}>
-          {hotelData.rooms?.map((room) => (
-            <motion.div key={room.id} whileHover={{ y: -4 }} className="card" style={{ padding: '1.5rem' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1rem' }}>
-                <div>
-                  <h4 style={{ fontSize: '1.2rem', color: '#f8fafc', textTransform: 'capitalize' }}>
-                    {room.room_type} Room
-                  </h4>
-                  <span style={{ fontSize: '0.8rem', color: '#94a3b8' }}>Capacity: Up to {room.capacity} Guests</span>
-                </div>
-                <div style={{ textAlign: 'right' }}>
-                  <div style={{ fontSize: '1.4rem', fontWeight: 800, color: '#f8fafc' }}>${room.price}</div>
-                  <div style={{ fontSize: '0.75rem', color: '#94a3b8' }}>per night</div>
-                </div>
-              </div>
-
-              <div style={{
-                fontSize: '0.82rem',
-                color: room.available_count > 0 ? '#22c55e' : '#ef4444',
-                fontWeight: 600,
-                marginBottom: '1.25rem',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.3rem',
-              }}>
-                <CheckCircle size={14} />
-                <span>{room.available_count > 0 ? `${room.available_count} Rooms Available` : 'Sold Out'}</span>
-              </div>
-
-              <button
-                disabled={room.available_count <= 0}
-                onClick={() => openBookingModal(room)}
-                className="btn-primary"
-                style={{ width: '100%', padding: '0.65rem' }}
-              >
-                {room.available_count > 0 ? 'Book Room' : 'Unavailable'}
-              </button>
-            </motion.div>
-          ))}
-        </div>
-      </div>
-
-      {/* Booking Modal */}
-      {modalOpen && selectedRoom && (
-        <div style={{
-          position: 'fixed',
-          inset: 0,
-          zIndex: 2000,
-          background: 'rgba(0, 0, 0, 0.75)',
-          backdropFilter: 'blur(8px)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          padding: '1.5rem',
-        }}>
-          <motion.div
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            className="glass"
-            style={{
-              width: '100%',
-              maxWidth: '480px',
-              padding: '2rem',
-              borderRadius: 'var(--radius-xl)',
-              position: 'relative',
-            }}
-          >
-            <button
-              onClick={() => setModalOpen(false)}
-              style={{
-                position: 'absolute',
-                top: '1rem',
-                right: '1rem',
-                background: 'none',
-                border: 'none',
-                color: '#94a3b8',
-                cursor: 'pointer',
-              }}
-            >
-              <X size={20} />
-            </button>
-
-            <h3 style={{ fontSize: '1.4rem', color: '#f8fafc', marginBottom: '0.25rem' }}>
-              Confirm Room Booking
-            </h3>
-            <p style={{ fontSize: '0.85rem', color: '#818cf8', marginBottom: '1.5rem' }}>
-              {hotelData.name} — {selectedRoom.room_type.toUpperCase()} Room
+        {/* Right: Booking Card */}
+        <div>
+          <div className="glass rounded-2xl p-6 sticky top-24" style={{ boxShadow: 'var(--shadow-glow)' }}>
+            <h3 className="text-lg font-bold text-white mb-1 font-heading">Book Your Stay</h3>
+            <p className="text-sm mb-5" style={{ color: 'var(--color-text-muted)' }}>
+              From <span className="text-xl font-bold text-white">${hotel.price_per_night}</span>/night
             </p>
 
-            <form onSubmit={handleBookingSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+            <div className="space-y-4">
               <div>
-                <label className="input-label">Check-In Date</label>
-                <input
-                  type="date"
-                  required
-                  min={new Date().toISOString().split('T')[0]}
-                  className="input-field"
-                  value={checkIn}
-                  onChange={(e) => setCheckIn(e.target.value)}
-                />
+                <label className="input-label flex items-center gap-1"><CalendarDays size={14} /> Check-in</label>
+                <input type="date" value={checkIn} onChange={(e) => setCheckIn(e.target.value)} min={today}
+                  className="input-field" id="hotel-checkin" />
+              </div>
+              <div>
+                <label className="input-label flex items-center gap-1"><CalendarDays size={14} /> Check-out</label>
+                <input type="date" value={checkOut} onChange={(e) => setCheckOut(e.target.value)} min={checkIn || today}
+                  className="input-field" id="hotel-checkout" />
+              </div>
+              <div>
+                <label className="input-label flex items-center gap-1"><Users size={14} /> Guests</label>
+                <input type="number" value={guests} onChange={(e) => setGuests(parseInt(e.target.value) || 1)}
+                  min={1} max={10} className="input-field" id="hotel-guests" />
               </div>
 
-              <div>
-                <label className="input-label">Check-Out Date</label>
-                <input
-                  type="date"
-                  required
-                  min={checkIn || new Date().toISOString().split('T')[0]}
-                  className="input-field"
-                  value={checkOut}
-                  onChange={(e) => setCheckOut(e.target.value)}
-                />
-              </div>
-
-              <div>
-                <label className="input-label">Number of Guests</label>
-                <select
-                  className="input-field"
-                  value={guests}
-                  onChange={(e) => setGuests(e.target.value)}
-                >
-                  {[...Array(selectedRoom.capacity)].map((_, i) => (
-                    <option key={i + 1} value={i + 1}>
-                      {i + 1} Guest{i > 0 ? 's' : ''}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              {checkIn && checkOut && new Date(checkOut) > new Date(checkIn) && (
-                <div style={{
-                  padding: '1rem',
-                  borderRadius: 'var(--radius-md)',
-                  background: 'rgba(99, 102, 241, 0.15)',
-                  border: '1px solid rgba(99, 102, 241, 0.3)',
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                }}>
-                  <span style={{ fontSize: '0.9rem', color: '#cbd5e1' }}>Total Calculated:</span>
-                  <span style={{ fontSize: '1.3rem', fontWeight: 800, color: '#f8fafc' }}>
-                    ${calculateTotal()}
-                  </span>
+              {selectedRoom && nights > 0 && (
+                <div className="p-3 rounded-xl" style={{ background: 'var(--color-surface)', border: '1px solid var(--color-border)' }}>
+                  <div className="flex justify-between text-sm mb-1">
+                    <span style={{ color: 'var(--color-text-muted)' }}>{selectedRoom.room_type} × {nights} nights</span>
+                    <span className="text-white">${totalPrice}</span>
+                  </div>
+                  <div className="flex justify-between font-bold pt-2 border-t" style={{ borderColor: 'var(--color-border)' }}>
+                    <span className="text-white">Total</span>
+                    <span className="text-xl gradient-text">${totalPrice}</span>
+                  </div>
                 </div>
               )}
 
-              <button
-                type="submit"
-                disabled={bookingLoading}
-                className="btn-primary"
-                style={{ width: '100%', padding: '0.85rem', marginTop: '0.5rem' }}
-              >
-                {bookingLoading ? 'Processing...' : 'Confirm & Book Now'}
+              <button onClick={handleBook} disabled={booking} className="btn-primary w-full" id="hotel-book-btn"
+                style={{ opacity: booking ? 0.7 : 1 }}>
+                {booking ? 'Booking...' : 'Book Now'}
               </button>
-            </form>
-          </motion.div>
+            </div>
+          </div>
         </div>
-      )}
-    </div>
+      </div>
+    </motion.div>
   )
 }

@@ -1,158 +1,64 @@
-import { Compass, Mail, Phone, MapPin, Heart, Send } from 'lucide-react'
 import { Link } from 'react-router-dom'
+import { Plane, Mail, MapPin, Phone } from 'lucide-react'
 
 export default function Footer() {
   return (
-    <footer style={{
-      background: '#090d16',
-      borderTop: '1px solid #1e293b',
-      color: '#94a3b8',
-      paddingTop: '4rem',
-      paddingBottom: '2rem',
-    }}>
-      <div style={{
-        maxWidth: '1280px',
-        margin: '0 auto',
-        padding: '0 1.5rem',
-      }}>
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
-          gap: '3rem',
-          marginBottom: '3.5rem',
-        }}>
-          {/* Brand Info */}
-          <div>
-            <Link to="/" style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', textDecoration: 'none', marginBottom: '1rem' }}>
-              <div style={{
-                width: '36px',
-                height: '36px',
-                borderRadius: '8px',
-                background: 'linear-gradient(135deg, #6366f1, #a855f7)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}>
-                <Compass size={20} color="#ffffff" />
+    <footer className="border-t" style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface-light)' }}>
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
+          {/* Brand */}
+          <div className="md:col-span-1">
+            <div className="flex items-center gap-2 mb-4">
+              <div className="w-9 h-9 rounded-xl flex items-center justify-center" style={{ background: 'var(--gradient-primary)' }}>
+                <Plane size={20} color="white" />
               </div>
-              <span style={{
-                fontFamily: 'var(--font-heading)',
-                fontWeight: 800,
-                fontSize: '1.3rem',
-                color: '#f8fafc',
-              }}>
-                Wander<span style={{ color: '#818cf8' }}>lust</span>
-              </span>
-            </Link>
-            <p style={{ fontSize: '0.9rem', lineHeight: '1.6', color: '#94a3b8', marginBottom: '1.5rem' }}>
-              Discover unforgettable destinations, hand-picked hotels, local expert guides, and curated experiences worldwide.
-            </p>
-            <div style={{ display: 'flex', gap: '1rem' }}>
-              {['Twitter', 'Instagram', 'Facebook', 'YouTube'].map((social) => (
-                <a
-                  key={social}
-                  href={`#${social}`}
-                  style={{
-                    width: '36px',
-                    height: '36px',
-                    borderRadius: '50%',
-                    background: '#1e293b',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    color: '#cbd5e1',
-                    fontSize: '0.8rem',
-                    fontWeight: 600,
-                    textDecoration: 'none',
-                    transition: 'all 0.2s',
-                  }}
-                >
-                  {social[0]}
-                </a>
-              ))}
+              <span className="text-xl font-bold font-heading text-white">Wanderlust</span>
             </div>
+            <p className="text-sm" style={{ color: 'var(--color-text-muted)' }}>
+              Your all-in-one platform for discovering and booking incredible travel experiences worldwide.
+            </p>
           </div>
 
           {/* Quick Links */}
           <div>
-            <h4 style={{ color: '#f8fafc', fontSize: '1rem', fontWeight: 700, marginBottom: '1.25rem' }}>
-              Quick Navigation
-            </h4>
-            <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-              <li><Link to="/" style={{ color: '#94a3b8', textDecoration: 'none', fontSize: '0.9rem' }}>Home</Link></li>
-              <li><Link to="/search" style={{ color: '#94a3b8', textDecoration: 'none', fontSize: '0.9rem' }}>Destinations & Hotels</Link></li>
-              <li><Link to="/tickets" style={{ color: '#94a3b8', textDecoration: 'none', fontSize: '0.9rem' }}>Travel Tickets</Link></li>
-              <li><Link to="/guides" style={{ color: '#94a3b8', textDecoration: 'none', fontSize: '0.9rem' }}>Hire Travel Guides</Link></li>
-              <li><Link to="/map" style={{ color: '#94a3b8', textDecoration: 'none', fontSize: '0.9rem' }}>Interactive Map</Link></li>
-            </ul>
-          </div>
-
-          {/* Contact Info */}
-          <div>
-            <h4 style={{ color: '#f8fafc', fontSize: '1rem', fontWeight: 700, marginBottom: '1.25rem' }}>
-              Get In Touch
-            </h4>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.9rem', fontSize: '0.9rem' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
-                <MapPin size={18} color="#818cf8" />
-                <span>742 Evergreen Terrace, San Francisco, CA</span>
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
-                <Phone size={18} color="#818cf8" />
-                <span>+1 (800) 555-WANDER</span>
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
-                <Mail size={18} color="#818cf8" />
-                <span>support@wanderlust-travel.com</span>
-              </div>
+            <h4 className="text-sm font-semibold text-white mb-4 uppercase tracking-wider">Explore</h4>
+            <div className="space-y-2">
+              {[{to:'/', label:'Home'}, {to:'/search', label:'Destinations'}, {to:'/tickets', label:'Tickets'}, {to:'/guides', label:'Travel Guides'}, {to:'/map', label:'Map'}].map(l => (
+                <Link key={l.to} to={l.to} className="block text-sm no-underline" style={{ color: 'var(--color-text-muted)' }}>{l.label}</Link>
+              ))}
             </div>
           </div>
 
-          {/* Newsletter */}
+          {/* Company */}
           <div>
-            <h4 style={{ color: '#f8fafc', fontSize: '1rem', fontWeight: 700, marginBottom: '1.25rem' }}>
-              Newsletter
-            </h4>
-            <p style={{ fontSize: '0.88rem', color: '#94a3b8', marginBottom: '1rem' }}>
-              Subscribe to receive exclusive travel deals, destination guides, and secret discounts.
-            </p>
-            <form onSubmit={(e) => e.preventDefault()} style={{ display: 'flex', gap: '0.5rem' }}>
-              <input
-                type="email"
-                placeholder="Enter your email"
-                className="input-field"
-                style={{ padding: '0.6rem 0.9rem', fontSize: '0.85rem' }}
-              />
-              <button
-                type="submit"
-                className="btn-primary"
-                style={{ padding: '0.6rem 1rem', borderRadius: 'var(--radius-md)' }}
-              >
-                <Send size={16} />
-              </button>
-            </form>
+            <h4 className="text-sm font-semibold text-white mb-4 uppercase tracking-wider">Company</h4>
+            <div className="space-y-2">
+              {[{to:'/about', label:'About Us'}, {to:'/contact', label:'Contact'}, {to:'/about', label:'Privacy Policy'}, {to:'/about', label:'Terms of Service'}].map((l, i) => (
+                <Link key={i} to={l.to} className="block text-sm no-underline" style={{ color: 'var(--color-text-muted)' }}>{l.label}</Link>
+              ))}
+            </div>
+          </div>
+
+          {/* Contact */}
+          <div>
+            <h4 className="text-sm font-semibold text-white mb-4 uppercase tracking-wider">Get in Touch</h4>
+            <div className="space-y-3">
+              <div className="flex items-center gap-2 text-sm" style={{ color: 'var(--color-text-muted)' }}>
+                <Mail size={14} className="text-indigo-400" /> hello@wanderlust.travel
+              </div>
+              <div className="flex items-center gap-2 text-sm" style={{ color: 'var(--color-text-muted)' }}>
+                <Phone size={14} className="text-indigo-400" /> +1 (555) 123-4567
+              </div>
+              <div className="flex items-center gap-2 text-sm" style={{ color: 'var(--color-text-muted)' }}>
+                <MapPin size={14} className="text-indigo-400" /> San Francisco, CA
+              </div>
+            </div>
           </div>
         </div>
 
-        {/* Bottom copyright */}
-        <div style={{
-          borderTop: '1px solid #1e293b',
-          paddingTop: '1.5rem',
-          display: 'flex',
-          flexWrap: 'wrap',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          gap: '1rem',
-          fontSize: '0.85rem',
-        }}>
-          <div>
-            © {new Date().getFullYear()} Wanderlust Inc. All rights reserved.
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', color: '#94a3b8' }}>
-            <span>Made with</span>
-            <Heart size={14} color="#ec4899" fill="#ec4899" />
-            <span>for global travelers</span>
-          </div>
+        <div className="mt-10 pt-6 border-t flex flex-col sm:flex-row items-center justify-between gap-4" style={{ borderColor: 'var(--color-border)' }}>
+          <p className="text-xs" style={{ color: 'var(--color-text-dim)' }}>© 2026 Wanderlust. All rights reserved.</p>
+          <p className="text-xs" style={{ color: 'var(--color-text-dim)' }}>Crafted with ❤️ for travelers everywhere</p>
         </div>
       </div>
     </footer>

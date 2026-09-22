@@ -1,189 +1,106 @@
-import { useState } from 'react'
 import { motion } from 'framer-motion'
-import { Mail, Phone, MapPin, Send, CheckCircle, AlertCircle } from 'lucide-react'
+import { useForm } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
+import { z } from 'zod'
+import { Mail, Send, MapPin, Phone, Clock } from 'lucide-react'
 import toast from 'react-hot-toast'
 import api from '../services/api'
 
+const fadeUp = { hidden: { opacity: 0, y: 20 }, visible: { opacity: 1, y: 0 } }
+
+const schema = z.object({
+  name: z.string().min(1, 'Name is required'),
+  email: z.string().email('Invalid email'),
+  message: z.string().min(10, 'Message must be at least 10 characters'),
+})
+
 export default function Contact() {
-  const [name, setName] = useState('')
-  const [email, setEmail] = useState('')
-  const [message, setMessage] = useState('')
-  const [loading, setLoading] = useState(false)
-  const [submitted, setSubmitted] = useState(false)
+  const { register, handleSubmit, reset, formState: { errors, isSubmitting } } = useForm({
+    resolver: zodResolver(schema),
+  })
 
-  const handleSubmit = async (e) => {
-    e.preventDefault()
-    if (!name || !email || !message) {
-      toast.error('Please fill out all contact form fields.')
-      return
-    }
-
-    setLoading(true)
-
+  const onSubmit = async (data) => {
     try {
-      await api.post('/contact', { name, email, message })
-      toast.success('Your message has been sent!')
-      setSubmitted(true)
-      setName('')
-      setEmail('')
-      setMessage('')
+      await api.post('/contact', data)
+      toast.success('Message sent! We\'ll get back to you soon.')
+      reset()
     } catch (err) {
-      const msg = err.response?.data?.error?.message || 'Failed to send message.'
-      toast.error(typeof msg === 'string' ? msg : 'Submission error')
-    } finally {
-      setLoading(false)
+      toast.error(err.response?.data?.error?.message || 'Failed to send message')
     }
   }
 
+  const contactInfo = [
+    { icon: Mail, label: 'Email', value: 'hello@wanderlust.travel' },
+    { icon: Phone, label: 'Phone', value: '+1 (555) 123-4567' },
+    { icon: MapPin, label: 'Location', value: 'San Francisco, CA' },
+    { icon: Clock, label: 'Hours', value: 'Mon–Fri, 9am–6pm PST' },
+  ]
+
   return (
-    <div className="section" style={{ minHeight: '85vh' }}>
-      <div style={{ textAlign: 'center', marginBottom: '3.5rem' }}>
-        <span className="badge badge-primary" style={{ marginBottom: '1rem' }}>
-          Contact & Support
-        </span>
-        <h1 className="section-title">We'd Love To Hear From You</h1>
-        <p className="section-subtitle" style={{ margin: '0 auto' }}>
-          Have a question about a booking, partnership, or feedback? Send us a message and our support team will respond within 24 hours.
-        </p>
-      </div>
-
-      <div style={{
-        display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))',
-        gap: '2.5rem',
-      }}>
-        {/* Contact Info Cards */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-          <div className="glass" style={{ padding: '1.75rem', borderRadius: 'var(--radius-lg)' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-              <div style={{
-                width: '44px',
-                height: '44px',
-                borderRadius: '10px',
-                background: 'rgba(99, 102, 241, 0.15)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}>
-                <MapPin size={22} color="#818cf8" />
-              </div>
-              <div>
-                <h4 style={{ color: '#f8fafc', fontSize: '1.05rem', marginBottom: '0.2rem' }}>Global Headquarters</h4>
-                <p style={{ color: '#94a3b8', fontSize: '0.88rem' }}>742 Evergreen Terrace, San Francisco, CA 94107</p>
-              </div>
-            </div>
-          </div>
-
-          <div className="glass" style={{ padding: '1.75rem', borderRadius: 'var(--radius-lg)' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-              <div style={{
-                width: '44px',
-                height: '44px',
-                borderRadius: '10px',
-                background: 'rgba(34, 197, 94, 0.15)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}>
-                <Phone size={22} color="#22c55e" />
-              </div>
-              <div>
-                <h4 style={{ color: '#f8fafc', fontSize: '1.05rem', marginBottom: '0.2rem' }}>Customer Hotline</h4>
-                <p style={{ color: '#94a3b8', fontSize: '0.88rem' }}>+1 (800) 555-WANDER (24/7 Support)</p>
-              </div>
-            </div>
-          </div>
-
-          <div className="glass" style={{ padding: '1.75rem', borderRadius: 'var(--radius-lg)' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-              <div style={{
-                width: '44px',
-                height: '44px',
-                borderRadius: '10px',
-                background: 'rgba(244, 114, 182, 0.15)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}>
-                <Mail size={22} color="#f472b6" />
-              </div>
-              <div>
-                <h4 style={{ color: '#f8fafc', fontSize: '1.05rem', marginBottom: '0.2rem' }}>Email Inquiries</h4>
-                <p style={{ color: '#94a3b8', fontSize: '0.88rem' }}>support@wanderlust-travel.com</p>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Contact Form */}
-        <div className="glass" style={{ padding: '2.5rem', borderRadius: 'var(--radius-xl)' }}>
-          {submitted ? (
-            <div style={{ textAlign: 'center', padding: '2rem 1rem' }}>
-              <CheckCircle size={48} color="#22c55e" style={{ marginBottom: '1rem' }} />
-              <h3 style={{ fontSize: '1.5rem', color: '#f8fafc', marginBottom: '0.5rem' }}>Message Received!</h3>
-              <p style={{ color: '#94a3b8', fontSize: '0.95rem', marginBottom: '1.5rem' }}>
-                Thank you for contacting Wanderlust. One of our team members will get back to you shortly.
-              </p>
-              <button
-                onClick={() => setSubmitted(false)}
-                className="btn-secondary"
-                style={{ padding: '0.5rem 1.25rem', fontSize: '0.88rem' }}
-              >
-                Send Another Message
-              </button>
-            </div>
-          ) : (
-            <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-              <div>
-                <label className="input-label">Your Name</label>
-                <input
-                  type="text"
-                  required
-                  placeholder="Jane Doe"
-                  className="input-field"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                />
-              </div>
-
-              <div>
-                <label className="input-label">Email Address</label>
-                <input
-                  type="email"
-                  required
-                  placeholder="jane@example.com"
-                  className="input-field"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                />
-              </div>
-
-              <div>
-                <label className="input-label">Your Message</label>
-                <textarea
-                  rows="5"
-                  required
-                  placeholder="Tell us how we can help..."
-                  className="input-field"
-                  style={{ resize: 'vertical' }}
-                  value={message}
-                  onChange={(e) => setMessage(e.target.value)}
-                />
-              </div>
-
-              <button
-                type="submit"
-                disabled={loading}
-                className="btn-primary"
-                style={{ width: '100%', padding: '0.85rem' }}
-              >
-                <Send size={18} />
-                <span>{loading ? 'Sending Message...' : 'Send Message'}</span>
-              </button>
-            </form>
-          )}
+    <motion.div initial="hidden" animate="visible" transition={{ staggerChildren: 0.08 }} className="min-h-screen">
+      <div className="py-10 px-4" style={{ background: 'linear-gradient(180deg, var(--color-surface-light), var(--color-surface))' }}>
+        <div className="max-w-7xl mx-auto text-center">
+          <motion.h1 variants={fadeUp} className="text-3xl sm:text-4xl font-bold font-heading text-white mb-2">
+            Get in <span className="gradient-text">Touch</span>
+          </motion.h1>
+          <motion.p variants={fadeUp} style={{ color: 'var(--color-text-muted)' }}>
+            Have a question or feedback? We'd love to hear from you.
+          </motion.p>
         </div>
       </div>
-    </div>
+
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+        <div className="grid grid-cols-1 lg:grid-cols-5 gap-10">
+          {/* Contact Info */}
+          <motion.div variants={fadeUp} className="lg:col-span-2 space-y-6">
+            <h2 className="text-xl font-bold text-white font-heading mb-4">Contact Information</h2>
+            {contactInfo.map(({ icon: Icon, label, value }) => (
+              <div key={label} className="flex items-start gap-4 p-4 rounded-xl"
+                style={{ background: 'var(--color-surface-light)', border: '1px solid var(--color-border)' }}>
+                <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
+                  style={{ background: 'rgba(99,102,241,0.1)' }}>
+                  <Icon size={18} className="text-indigo-400" />
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-white">{label}</p>
+                  <p className="text-sm" style={{ color: 'var(--color-text-muted)' }}>{value}</p>
+                </div>
+              </div>
+            ))}
+          </motion.div>
+
+          {/* Form */}
+          <motion.div variants={fadeUp} className="lg:col-span-3">
+            <div className="glass rounded-2xl p-8" style={{ boxShadow: 'var(--shadow-glow)' }}>
+              <h2 className="text-xl font-bold text-white font-heading mb-6">Send us a Message</h2>
+              <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="input-label">Name</label>
+                    <input {...register('name')} className="input-field" placeholder="Your name" id="contact-name" />
+                    {errors.name && <p className="input-error">{errors.name.message}</p>}
+                  </div>
+                  <div>
+                    <label className="input-label">Email</label>
+                    <input {...register('email')} type="email" className="input-field" placeholder="you@example.com" id="contact-email" />
+                    {errors.email && <p className="input-error">{errors.email.message}</p>}
+                  </div>
+                </div>
+                <div>
+                  <label className="input-label">Message</label>
+                  <textarea {...register('message')} rows={5} className="input-field" placeholder="How can we help?"
+                    id="contact-message" style={{ resize: 'vertical' }} />
+                  {errors.message && <p className="input-error">{errors.message.message}</p>}
+                </div>
+                <button type="submit" disabled={isSubmitting} className="btn-primary" id="contact-submit"
+                  style={{ opacity: isSubmitting ? 0.7 : 1 }}>
+                  <Send size={16} /> {isSubmitting ? 'Sending...' : 'Send Message'}
+                </button>
+              </form>
+            </div>
+          </motion.div>
+        </div>
+      </div>
+    </motion.div>
   )
 }

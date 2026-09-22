@@ -7,24 +7,8 @@ export default function ProtectedRoute({ children }) {
 
   if (loading) {
     return (
-      <div style={{
-        minHeight: '60vh',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        flexDirection: 'column',
-        gap: '1rem',
-      }}>
-        <div style={{
-          width: '40px',
-          height: '40px',
-          borderRadius: '50%',
-          border: '3px solid #334155',
-          borderTopColor: '#6366f1',
-          animation: 'spin 1s linear infinite',
-        }} />
-        <style>{`@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }`}</style>
-        <span style={{ color: '#94a3b8', fontSize: '0.9rem' }}>Verifying session...</span>
+      <div className="flex items-center justify-center" style={{ minHeight: '60vh' }}>
+        <div className="w-10 h-10 rounded-full border-4 border-indigo-500 border-t-transparent animate-spin" />
       </div>
     )
   }

@@ -1,162 +1,90 @@
 import { useState } from 'react'
 import { Link, useNavigate, useLocation } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { Mail, Lock, LogIn, Compass, AlertCircle } from 'lucide-react'
+import { useForm } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
+import { z } from 'zod'
+import { LogIn, Eye, EyeOff } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { useAuth } from '../context/AuthContext'
 
-export default function Login() {
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
-  const [loading, setLoading] = useState(false)
-  const [errorMsg, setErrorMsg] = useState('')
+const schema = z.object({
+  email: z.string().email('Invalid email address'),
+  password: z.string().min(6, 'Password must be at least 6 characters'),
+})
 
+export default function Login() {
+  const [showPw, setShowPw] = useState(false)
   const { login } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
   const from = location.state?.from?.pathname || '/'
 
-  const handleSubmit = async (e) => {
-    e.preventDefault()
-    if (!email || !password) {
-      setErrorMsg('Please fill in all fields.')
-      return
-    }
+  const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm({
+    resolver: zodResolver(schema),
+  })
 
-    setLoading(true)
-    setErrorMsg('')
-
+  const onSubmit = async (data) => {
     try {
-      await login(email, password)
+      await login(data.email, data.password)
       toast.success('Welcome back!')
       navigate(from, { replace: true })
     } catch (err) {
-      let msg = err.response?.data?.error?.message || err.response?.data?.message || err.message
-      if (typeof msg === 'object' && msg !== null) {
-        msg = Object.entries(msg)
-          .map(([key, val]) => `${key}: ${Array.isArray(val) ? val.join(', ') : val}`)
-          .join('; ')
-      }
-      if (!msg || msg === 'Network Error' || !err.response) {
-        msg = 'Cannot connect to backend server. Make sure the server is running.'
-      }
-      setErrorMsg(msg)
-      toast.error('Login failed')
-    } finally {
-      setLoading(false)
+      toast.error(err.response?.data?.error?.message || 'Invalid credentials')
     }
   }
 
   return (
-    <div style={{
-      minHeight: '85vh',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      padding: '2rem 1.5rem',
-      background: 'radial-gradient(circle at 50% 30%, rgba(99, 102, 241, 0.15) 0%, rgba(15, 23, 42, 1) 70%)',
-    }}>
+    <div className="min-h-screen flex items-center justify-center px-4 py-16" style={{ background: 'var(--gradient-hero)' }}>
+      {/* Decorative */}
+      <div className="absolute top-20 left-10 w-72 h-72 rounded-full opacity-15 blur-3xl" style={{ background: '#6366f1' }} />
+      <div className="absolute bottom-20 right-10 w-64 h-64 rounded-full opacity-10 blur-3xl" style={{ background: '#ec4899' }} />
+
       <motion.div
-        initial={{ opacity: 0, scale: 0.95 }}
-        animate={{ opacity: 1, scale: 1 }}
-        className="glass"
-        style={{
-          width: '100%',
-          maxWidth: '440px',
-          padding: '2.5rem',
-          borderRadius: 'var(--radius-xl)',
-          boxShadow: '0 25px 50px rgba(0,0,0,0.4)',
-        }}
+        initial={{ opacity: 0, y: 30, scale: 0.95 }}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
+        transition={{ duration: 0.6 }}
+        className="glass rounded-3xl p-8 sm:p-10 w-full max-w-md relative"
+        style={{ boxShadow: '0 0 80px rgba(99,102,241,0.1)' }}
       >
-        <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
-          <div style={{
-            width: '48px',
-            height: '48px',
-            borderRadius: '12px',
-            background: 'linear-gradient(135deg, #6366f1, #a855f7)',
-            display: 'inline-flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            marginBottom: '1rem',
-          }}>
-            <Compass size={26} color="#ffffff" />
+        <div className="text-center mb-8">
+          <div className="w-14 h-14 rounded-2xl mx-auto mb-4 flex items-center justify-center" style={{ background: 'var(--gradient-primary)' }}>
+            <LogIn size={26} color="white" />
           </div>
-          <h2 style={{ fontSize: '1.75rem', color: '#f8fafc', marginBottom: '0.5rem' }}>
-            Welcome Back
-          </h2>
-          <p style={{ color: '#94a3b8', fontSize: '0.9rem' }}>
-            Sign in to access your bookings and travel plans
-          </p>
+          <h1 className="text-2xl font-bold font-heading text-white">Welcome Back</h1>
+          <p className="text-sm mt-1" style={{ color: 'var(--color-text-muted)' }}>Sign in to continue your journey</p>
         </div>
 
-        {errorMsg && (
-          <div style={{
-            padding: '0.75rem 1rem',
-            borderRadius: 'var(--radius-md)',
-            background: 'rgba(239, 68, 68, 0.15)',
-            border: '1px solid rgba(239, 68, 68, 0.3)',
-            color: '#f87171',
-            fontSize: '0.85rem',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '0.5rem',
-            marginBottom: '1.5rem',
-          }}>
-            <AlertCircle size={16} />
-            <span>{errorMsg}</span>
-          </div>
-        )}
-
-        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
           <div>
-            <label className="input-label">Email Address</label>
-            <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
-              <Mail size={18} color="#94a3b8" style={{ position: 'absolute', left: '12px' }} />
-              <input
-                type="email"
-                required
-                placeholder="you@example.com"
-                className="input-field"
-                style={{ paddingLeft: '2.4rem' }}
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-              />
-            </div>
+            <label className="input-label">Email</label>
+            <input {...register('email')} type="email" className="input-field" placeholder="you@example.com" id="login-email" />
+            {errors.email && <p className="input-error">{errors.email.message}</p>}
           </div>
 
           <div>
             <label className="input-label">Password</label>
-            <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
-              <Lock size={18} color="#94a3b8" style={{ position: 'absolute', left: '12px' }} />
-              <input
-                type="password"
-                required
-                placeholder="••••••••"
-                className="input-field"
-                style={{ paddingLeft: '2.4rem' }}
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-              />
+            <div className="relative">
+              <input {...register('password')} type={showPw ? 'text' : 'password'} className="input-field" placeholder="••••••••" id="login-password" style={{ paddingRight: '2.5rem' }} />
+              <button type="button" onClick={() => setShowPw(!showPw)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 bg-transparent border-none cursor-pointer"
+                style={{ color: 'var(--color-text-dim)' }}>
+                {showPw ? <EyeOff size={18} /> : <Eye size={18} />}
+              </button>
             </div>
+            {errors.password && <p className="input-error">{errors.password.message}</p>}
           </div>
 
-          <button
-            type="submit"
-            disabled={loading}
-            className="btn-primary"
-            style={{ width: '100%', padding: '0.85rem', marginTop: '0.5rem' }}
-          >
-            <LogIn size={18} />
-            <span>{loading ? 'Signing in...' : 'Sign In'}</span>
+          <button type="submit" disabled={isSubmitting} className="btn-primary w-full" id="login-submit"
+            style={{ opacity: isSubmitting ? 0.7 : 1 }}>
+            {isSubmitting ? 'Signing in...' : 'Sign In'}
           </button>
         </form>
 
-        <div style={{ textAlign: 'center', marginTop: '2rem', fontSize: '0.9rem', color: '#94a3b8' }}>
+        <p className="text-center text-sm mt-6" style={{ color: 'var(--color-text-muted)' }}>
           Don't have an account?{' '}
-          <Link to="/signup" style={{ color: '#818cf8', fontWeight: 600 }}>
-            Sign Up
-          </Link>
-        </div>
+          <Link to="/signup" className="font-semibold text-indigo-400 hover:text-indigo-300">Sign up</Link>
+        </p>
       </motion.div>
     </div>
   )
